@@ -1,67 +1,91 @@
-# 8-bit DIT FFT (Synthesis & Simulation)
+# 8-bit DIT FFT using Finite State Machine (FSM) (Synthesis & Simulation)
 
 ## Overview
 
-This project presents an **8-point Radix-2 Decimation-in-Time Fast Fourier Transform (DIT-FFT)** implemented in **Verilog HDL**. The design has been developed for both **functional simulation** and **FPGA synthesis**, demonstrating a hardware-efficient implementation of the FFT algorithm using fixed-point arithmetic.
+This project implements an **8-point Radix-2 Decimation-in-Time Fast Fourier Transform (DIT-FFT)** using **Verilog HDL** with a **Finite State Machine (FSM)-based control architecture**. The design is developed for both **functional simulation** and **FPGA synthesis**, where the FFT computation is controlled sequentially through multiple states.
 
-The project verifies the functionality through simulation and validates hardware compatibility through synthesis reports.
+Instead of processing all butterfly operations in parallel, the FSM manages each stage of the FFT, making the design more resource-efficient and suitable for hardware implementation.
 
 ---
 
 ## Features
 
 * 8-point Radix-2 DIT FFT
+* FSM-controlled sequential execution
 * Synthesizable Verilog HDL design
-* Functional simulation
-* FPGA-compatible architecture
-* Fixed-point arithmetic implementation
-* Butterfly-based processing stages
-* Twiddle factor ROM
-* RTL synthesis and resource utilization analysis
+* Functional simulation and FPGA synthesis
+* Fixed-point arithmetic
+* Three-stage butterfly computation
+* Twiddle factor lookup table (ROM)
+* Resource-efficient architecture
 
 ---
 
-## FFT Architecture
+## Architecture
 
 ```text
-          8 Input Samples
-                 │
-                 ▼
-      Stage 1 Butterfly Units
-                 │
-                 ▼
-      Stage 2 Butterfly Units
-                 │
-                 ▼
-      Stage 3 Butterfly Units
-                 │
-                 ▼
-        FFT Frequency Output
+                 +----------------------+
+                 |     Input Samples    |
+                 +----------+-----------+
+                            |
+                            v
+                  +------------------+
+                  |   FSM Controller |
+                  +--------+---------+
+                           |
+      +--------------------+--------------------+
+      |                    |                    |
+      v                    v                    v
+ Stage 1             Stage 2             Stage 3
+Butterflies         Butterflies         Butterflies
+      |                    |                    |
+      +--------------------+--------------------+
+                           |
+                           v
+                 Frequency Domain Output
 ```
 
-The FFT computation is performed in three butterfly stages, where each stage combines data using predefined twiddle factors.
+The FSM controls the execution of each FFT stage by transitioning through predefined states, ensuring correct sequencing of butterfly operations.
+
+---
+
+## FSM States
+
+The controller progresses through the following states:
+
+| State      | Description                                |
+| ---------- | ------------------------------------------ |
+| **IDLE**   | Waits for reset completion or start signal |
+| **LOAD**   | Loads the 8 input samples                  |
+| **STAGE1** | Executes Stage 1 butterfly operations      |
+| **STAGE2** | Executes Stage 2 butterfly operations      |
+| **STAGE3** | Executes Stage 3 butterfly operations      |
+| **OUTPUT** | Stores or outputs the FFT results          |
+| **DONE**   | Indicates completion of FFT computation    |
 
 ---
 
 ## Project Structure
 
 ```text
-8-bit-DITFFT/
+8-bit-DITFFT-FSM/
 │
 ├── rtl/
-│   ├── dit_fft.v
+│   ├── dit_fft_fsm.v
 │   ├── butterfly.v
 │   ├── complex_multiplier.v
 │   ├── twiddle_rom.v
+│   ├── controller_fsm.v
 │   └── ...
 │
 ├── tb/
-│   └── tb_dit_fft.v
+│   └── tb_dit_fft_fsm.v
 │
 ├── synthesis/
 │   ├── constraints.xdc
-│   ├── synthesis_report.pdf
-│   └── utilization_report.pdf
+│   ├── utilization_report.pdf
+│   ├── timing_report.pdf
+│   └── rtl_schematic.pdf
 │
 ├── sim/
 │   ├── run.do
@@ -69,6 +93,7 @@ The FFT computation is performed in three butterfly stages, where each stage com
 │
 ├── docs/
 │   ├── architecture.png
+│   ├── fsm_state_diagram.png
 │   ├── rtl_schematic.png
 │   └── waveform.png
 │
@@ -77,16 +102,20 @@ The FFT computation is performed in three butterfly stages, where each stage com
 
 ---
 
-## Development Tools
+## Tools Used
 
-### Design & Simulation
+### Design
+
+* Verilog HDL
+
+### Simulation
 
 * ModelSim / QuestaSim
 
 ### Synthesis
 
 * Xilinx Vivado
-* Intel Quartus Prime (with minor modifications if required)
+* Intel Quartus Prime
 
 ---
 
@@ -101,11 +130,11 @@ vlog *.v
 ### Simulate
 
 ```tcl
-vsim tb_dit_fft
+vsim tb_dit_fft_fsm
 run -all
 ```
 
-### Display Waveforms
+### View Waveforms
 
 ```tcl
 add wave *
@@ -116,19 +145,20 @@ run -all
 
 ## Synthesis
 
-The design is fully synthesizable and can be targeted to FPGA devices.
+The design is fully synthesizable.
 
 Typical synthesis flow:
 
 1. Create a new FPGA project.
-2. Add all RTL source files.
-3. Set the top-level module.
-4. Add the constraint (.xdc) file.
+2. Add all RTL files.
+3. Specify the top module.
+4. Add FPGA constraints (.xdc).
 5. Run:
 
    * RTL Elaboration
    * Synthesis
    * Implementation
+   * Timing Analysis
    * Bitstream Generation (optional)
 
 ---
@@ -137,7 +167,8 @@ Typical synthesis flow:
 
 * Clock
 * Reset
-* Eight input samples (8-bit fixed-point)
+* Start signal
+* Eight 8-bit input samples
 
 ---
 
@@ -145,64 +176,48 @@ Typical synthesis flow:
 
 * FFT Real Output
 * FFT Imaginary Output
-
-The outputs represent the frequency-domain components corresponding to the input sequence.
+* Done signal
 
 ---
 
 ## Verification
 
-The design has been verified through:
+The design is verified using:
 
 * Functional simulation
-* Waveform analysis
+* FSM state transition verification
+* Butterfly computation validation
 * RTL elaboration
-* Synthesis without errors
-* Resource utilization reports
+* Synthesis
+* Resource utilization analysis
 * Timing analysis
-
----
-
-## Synthesis Results
-
-The synthesis process generates:
-
-* RTL schematic
-* Technology schematic
-* Resource utilization report
-* Timing report
-* Critical path analysis
-
-Typical resources include:
-
-* Lookup Tables (LUTs)
-* Flip-Flops (FFs)
-* DSP Blocks (if complex multiplication is mapped to DSPs)
-* I/O Pins
-* Clock resources
 
 ---
 
 ## Simulation Results
 
-Simulation validates:
+Simulation verifies:
 
-* Correct butterfly operations
-* Stage-by-stage FFT computation
-* Real and imaginary output generation
-* Proper reset and clock behavior
+* Correct FSM state transitions
+* Sequential execution of FFT stages
+* Proper butterfly computations
+* Accurate FFT output generation
 
-Example waveform signals:
+Typical waveform signals include:
 
 ```text
 clk
 reset
-input_sample[7:0]
+start
+current_state
+next_state
+input_data
 stage1_data
 stage2_data
 stage3_data
 fft_real
 fft_imag
+done
 ```
 
 ---
@@ -210,24 +225,22 @@ fft_imag
 ## Applications
 
 * Digital Signal Processing (DSP)
-* OFDM Transceivers
 * Wireless Communication
+* OFDM Systems
+* Spectrum Analysis
 * Audio Processing
 * Image Processing
-* Radar Signal Processing
-* Spectrum Analysis
 
 ---
 
 ## Future Improvements
 
-* 16-point, 32-point, and 64-point FFT support
-* Pipelined FFT architecture
-* Runtime-configurable FFT size
-* Floating-point implementation
-* High-speed streaming interface (AXI-Stream)
+* Parameterized FFT size (16/32/64-point)
+* Pipelined FSM architecture
+* Streaming data interface (AXI-Stream)
+* Higher-precision arithmetic
 * SystemVerilog/UVM-based verification
-* ASIC synthesis support
+* ASIC implementation
 
 ---
 
